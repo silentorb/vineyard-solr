@@ -1,0 +1,12 @@
+{
+  "name": "vineyard-solr",
+  "version": "0.0.0",
+  "description": "Solr integration for Vineyard",
+  "main": "lib/Solr.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/silentorb/vineyard-solr.git"
+  },
+  "author": "Christopher W. Johnson",
+  "license": "MIT"
+}
