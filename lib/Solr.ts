@@ -6,11 +6,16 @@
 import MetaHub = require('metahub')
 import Ground = require('ground')
 import Vineyard = require('vineyard')
+import when = require('when')
 
-interface Solr_Config {
+interface Solr_Server_Config {
   host:string
   port:number
   path?:string
+}
+
+interface Solr_Config {
+  solr_server:Solr_Server_Config
   trellises
 }
 
@@ -26,12 +31,13 @@ class Solr extends Vineyard.Bulb {
 
   post(path, data):Promise {
     var config = <Solr_Config>this.config
+    var server = config.solr_server
     var def = when.defer()
     var http = require('http')
     var options = {
-      host: config.host,
-      port: config.port,
-      path: config.path ? config.path + '/' + path : path,
+      host: server.host,
+      port: server.port,
+      path: server.path ? server.path + '/' + path : path,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

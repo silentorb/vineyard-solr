@@ -2,6 +2,7 @@
 interface Deferred {
   promise: Promise;
   resolve(...args:any[]);
+  reject;
 }
 
 interface Promise {

@@ -14,7 +14,7 @@ module.exports = function (grunt) {
         options: {                    // use to override the default options, http://gruntjs.com/configuring-tasks#options
           target: 'es5',            // 'es3' (default) | 'es5'
           module: 'commonjs',       // 'amd' (default) | 'commonjs'
-          declaration: true,       // true | false  (default)
+          declaration: false,       // true | false  (default)
           verbose: true
         }
       }
