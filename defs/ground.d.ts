@@ -87,6 +87,7 @@ declare module Ground {
     }
     interface External_Query_Source extends Property_Query_Source {
         trellis: string;
+        map?: any;
     }
     interface Internal_Query_Source {
         fields?: any;
@@ -411,6 +412,7 @@ declare module Ground {
         public include_links: boolean;
         public transforms: Query_Transform[];
         public subqueries: {};
+        public map: {};
         static operators: {
             '=': any;
             'LIKE': {
@@ -424,6 +426,7 @@ declare module Ground {
         public add_filter(property_name: string, value?: any, operator?: string): void;
         public add_key_filter(value: any): void;
         public add_sort(sort: Query_Sort): void;
+        public add_map(target: string, source?: any): void;
         public add_subquery(property_name: string, source?: any): Query_Builder;
         public add_transform_clause(clause: string): void;
         public create_runner(): Ground.Query_Runner;

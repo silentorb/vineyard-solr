@@ -22,6 +22,7 @@ interface Solr_Config {
 
 interface Solr_Trellis {
   query
+  suggestions:boolean
 }
 
 class Solr extends Vineyard.Bulb {
@@ -47,7 +48,7 @@ class Solr extends Vineyard.Bulb {
 
     var config = <Solr_Config>this.config
     for (var i in config.trellises) {
-      var solr_trellis = config.trellises[i]
+      var solr_trellis = <Solr_Trellis>config.trellises[i]
       var query_builder = new Ground.Query_Builder(this.ground.trellises[i])
       query_builder.extend(solr_trellis.query)
       solr_trellis.query = query_builder
@@ -55,7 +56,36 @@ class Solr extends Vineyard.Bulb {
       this.listen(this.ground, i + ".update", (seed, update:Ground.Update):Promise =>
           this.update_entry(update.trellis.name, seed)
       )
+
+
     }
+
+    var lawn = this.vineyard.bulbs['lawn']
+    this.listen(lawn, 'http.start', ()=> {
+      for (var i in config.trellises) {
+        var solr_trellis = <Solr_Trellis>config.trellises[i]
+        if (solr_trellis.suggestions)
+          lawn.listen_public_http('/vineyard/solr/' + i + '/suggest', (req, res)=> this.suggest(req, res, i), 'get')
+      }
+    })
+
+  }
+
+  suggest(req, res, trellis_name:string):Promise {
+    var url = trellis_name + '/suggest?q=' + req.query['q'] + '*&wt=json'
+    return this.get_json(url)
+      .then((response)=> {
+        var suggestions = []
+        var source = response.content.suggest[trellis_name + '_suggest']
+        var result = source[Object.keys(source)[0]]
+        if (result && typeof result === 'object') {
+          suggestions = result.suggestions
+        }
+
+        res.send({
+          objects: suggestions
+        })
+      })
   }
 
   post(path, data, mode = 'json'):Promise {
@@ -88,10 +118,8 @@ class Solr extends Vineyard.Bulb {
         })
 
         res.on('end', function () {
-          res.content = JSON.parse(buffer)
-          console.log('response2', res.content)
+          res.content = mode == 'json' ? JSON.parse(buffer) : buffer.toString()
           def.resolve(res)
-          console.log();
         })
       }
     })
@@ -137,7 +165,6 @@ class Solr extends Vineyard.Bulb {
           res.content = JSON.parse(buffer)
           console.log('response2', res.content)
           def.resolve(res)
-          console.log();
         })
       }
     })
@@ -190,7 +217,7 @@ class Solr extends Vineyard.Bulb {
   create_update(trellis_name:string):Promise {
     return this.create_trellis_updates(trellis_name)
       .then((updates)=> {
-        console.log('update-solr', trellis_name, updates)
+        console.log('update-solr', trellis_name, JSON.stringify(updates))
         return this.post_update(trellis_name, updates)
       })
   }
@@ -204,7 +231,7 @@ class Solr extends Vineyard.Bulb {
         update[i] = seed[i]
     }
 
-    console.log('update-solr', trellis_name, update)
+    console.log('update-solr2', trellis_name, JSON.stringify(update))
     return this.post_update(trellis_name, [ update ])
   }
 
