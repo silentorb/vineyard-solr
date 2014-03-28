@@ -31,11 +31,17 @@ class Solr extends Vineyard.Bulb {
     Ground.Query_Builder.operators['solr'] = {
       "prepare": (filter, property):Promise => {
         var url = property.parent.name + '/select?q=' + property.name + ':*' + filter.value + '*&wt=json'
+        console.log('solr-query', url)
         return this.get_json(url)
           .then((response) => {
             var trellis = property.parent
             var primary = trellis.properties[trellis.primary_key]
-            var ids = response.content.response.docs.map((doc)=> primary.get_sql_value(doc.guid))
+            var docs = response.content.response.docs
+            if (!docs.length) {
+              return false
+            }
+
+            var ids = docs.map((doc)=> primary.get_sql_value(doc.guid))
             filter.value = ids.join(', ')
           })
       },
