@@ -61,14 +61,15 @@ class Solr extends Vineyard.Bulb {
     }
 
     var lawn = this.vineyard.bulbs['lawn']
-    this.listen(lawn, 'http.start', ()=> {
-      for (var i in config.trellises) {
-        var solr_trellis = <Solr_Trellis>config.trellises[i]
-        if (solr_trellis.suggestions)
-          lawn.listen_public_http('/vineyard/solr/' + i + '/suggest', (req, res)=> this.suggest(req, res, i), 'get')
-      }
-    })
-
+    if (lawn) {
+      this.listen(lawn, 'http.start', ()=> {
+        for (var i in config.trellises) {
+          var solr_trellis = <Solr_Trellis>config.trellises[i]
+          if (solr_trellis.suggestions)
+            lawn.listen_public_http('/vineyard/solr/' + i + '/suggest', (req, res)=> this.suggest(req, res, i), 'get')
+        }
+      })
+    }
   }
 
   suggest(req, res, trellis_name:string):Promise {
