@@ -72,7 +72,7 @@ class Solr extends Vineyard.Bulb {
   }
 
   suggest(req, res, trellis_name:string):Promise {
-    var url = trellis_name + '/suggest?q=' + req.query['q'] + '*&wt=json'
+    var url = trellis_name + '/suggest?q=' + req.query['q'] + '&wt=json'
     return this.get_json(url)
       .then((response)=> {
         var suggestions = []
