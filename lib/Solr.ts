@@ -164,7 +164,7 @@ class Solr extends Vineyard.Bulb {
 
         res.on('end', function () {
           res.content = JSON.parse(buffer)
-          console.log('response2', res.content)
+//          console.log('response2', res.content)
           def.resolve(res)
         })
       }
