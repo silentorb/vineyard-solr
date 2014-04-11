@@ -1,10 +1,7 @@
 module.exports = function (grunt) {
 
   grunt.loadNpmTasks('grunt-ts')
-  grunt.loadNpmTasks('grunt-contrib-concat')
   grunt.loadNpmTasks('grunt-contrib-watch')
-  grunt.loadNpmTasks('grunt-contrib-copy')
-  grunt.loadNpmTasks('grunt-text-replace')
 
   grunt.initConfig({
     ts: {

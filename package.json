@@ -1,6 +1,6 @@
 {
   "name": "vineyard-solr",
-  "version": "0.0.0",
+  "version": "0.1.1",
   "description": "Solr integration for Vineyard",
   "main": "lib/Solr.js",
   "repository": {
@@ -8,5 +8,10 @@
     "url": "https://github.com/silentorb/vineyard-solr.git"
   },
   "author": "Christopher W. Johnson",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "grunt": "~0.4.4",
+    "grunt-contrib-watch": "~0.6.1",
+    "grunt-ts": "~1.10.0"
+  }
 }

@@ -1,10 +1,7 @@
-/// <reference path="../defs/when.d.ts"/>
-/// <reference path="../defs/metahub.d.ts"/>
-/// <reference path="../defs/ground.d.ts"/>
-/// <reference path="../defs/vineyard.d.ts"/>
+/// <reference path="../../vineyard/vineyard.d.ts"/>
 
-import MetaHub = require('metahub')
-import Ground = require('ground')
+import MetaHub = require('vineyard-metahub')
+import Ground = require('vineyard-ground')
 import Vineyard = require('vineyard')
 import when = require('when')
 import zlib = require('zlib');
