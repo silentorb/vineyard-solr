@@ -10,16 +10,18 @@ interface Solr_Server_Config {
   host:string
   port:number
   path?:string
+  core:string
 }
 
 interface Solr_Config {
-  solr_server:Solr_Server_Config
+  server:Solr_Server_Config
   trellises
 }
 
 interface Solr_Trellis {
   query
   suggestions:boolean
+  core?:string
 }
 
 class Solr extends Vineyard.Bulb {
@@ -27,10 +29,11 @@ class Solr extends Vineyard.Bulb {
   grow() {
     Ground.Query_Builder.operators['solr'] = {
       "prepare": (filter, property):Promise => {
-        var url = property.parent.name + '/select?q=' + property.name + ':*' + filter.value + '*&wt=json'
-        console.log('solr-query', url)
+        var url = this.get_core() + '/select?q=' + property.name + ':*' + encodeURIComponent(filter.value) + '*&wt=json'
+//        console.log('solr-query', url)
         return this.get_json(url)
           .then((response) => {
+//            console.log('solr result', response)
             var trellis = property.parent
             var primary = trellis.properties[trellis.primary_key]
             var docs = response.content.response.docs
@@ -38,7 +41,7 @@ class Solr extends Vineyard.Bulb {
               return false
             }
 
-            var ids = docs.map((doc)=> primary.get_sql_value(doc.guid))
+            var ids = docs.map((doc)=> primary.get_sql_value(doc[trellis.primary_key]))
             filter.value = ids.join(', ')
           })
       },
@@ -52,6 +55,7 @@ class Solr extends Vineyard.Bulb {
     var config = <Solr_Config>this.config
     for (var i in config.trellises) {
       var solr_trellis = <Solr_Trellis>config.trellises[i]
+      solr_trellis.core = solr_trellis.core || i
       var query_builder = new Ground.Query_Builder(this.ground.trellises[i])
       query_builder.extend(solr_trellis.query)
       solr_trellis.query = query_builder
@@ -59,8 +63,6 @@ class Solr extends Vineyard.Bulb {
       this.listen(this.ground, i + ".update", (seed, update:Ground.Update):Promise =>
           this.update_entry(update.trellis.name, seed)
       )
-
-
     }
 
     var lawn = this.vineyard.bulbs['lawn']
@@ -69,14 +71,20 @@ class Solr extends Vineyard.Bulb {
         for (var i in config.trellises) {
           var solr_trellis = <Solr_Trellis>config.trellises[i]
           if (solr_trellis.suggestions)
-            lawn.listen_public_http('/vineyard/solr/' + i + '/suggest', (req, res)=> this.suggest(req, res, i), 'get')
+            lawn.listen_public_http('/vineyard/solr/' + this.get_core() + '/suggest',
+              (req, res)=> this.suggest(req, res, i), 'get')
         }
       })
     }
   }
 
+  get_core():string {
+    var config = <Solr_Config>this.config
+    return config.server.core
+  }
+
   suggest(req, res, trellis_name:string):Promise {
-    var url = trellis_name + '/suggest?q=' + req.query['q'] + '&wt=json'
+    var url = this.get_core() + '/suggest?q=' + encodeURIComponent(req.query['q']) + '&wt=json'
     return this.get_json(url)
       .then((response)=> {
         var suggestions = []
@@ -94,7 +102,7 @@ class Solr extends Vineyard.Bulb {
 
   post(path, data, mode = 'json'):Promise {
     var config = <Solr_Config>this.config
-    var server = config.solr_server
+    var server = config.server
     var def = when.defer()
     var http = require('http')
     var options = {
@@ -141,7 +149,7 @@ class Solr extends Vineyard.Bulb {
 
   get_json(path):Promise {
     var config = <Solr_Config>this.config
-    var server = config.solr_server
+    var server = config.server
     var def = when.defer()
     var http = require('http')
     var options = {
@@ -152,25 +160,24 @@ class Solr extends Vineyard.Bulb {
     }
 
     var req = http.request(options, function (res) {
-      if (res.statusCode != '200') {
-        res.setEncoding('utf8')
-        res.on('data', function (chunk) {
-          console.log('client received an error:', res.statusCode, chunk)
-          def.reject()
-        })
-      }
-      else {
-        var buffer = ''
-        res.on('data', function (chunk) {
-          buffer += chunk
-        })
+      res.setEncoding('utf8')
+      var buffer = ''
+      res.on('data', function (chunk) {
+        buffer += chunk
+      })
 
-        res.on('end', function () {
+      res.on('end', function () {
+        if (buffer.length > 0)
           res.content = JSON.parse(buffer)
-//          console.log('response2', res.content)
+
+        if (res.statusCode != '200') {
+          console.log('client received an error:', res.statusCode, buffer)
+          def.reject()
+        }
+        else {
           def.resolve(res)
-        })
-      }
+        }
+      })
     })
 
     req.end()
@@ -183,12 +190,12 @@ class Solr extends Vineyard.Bulb {
     return def.promise
   }
 
-  post_update(trellis_name:string, data):Promise {
-    return this.post(trellis_name + '/update/json?commit=true', data)
+  post_update(data):Promise {
+    return this.post(this.get_core() + '/update/json?commit=true', data)
   }
 
   rebuild_indexes():Promise {
-    return this.clear_all()
+    return this.clear()
       .then(()=>
         this.perform_on_all_trellises((name)=>
             this.create_update(name)
@@ -207,22 +214,15 @@ class Solr extends Vineyard.Bulb {
     return pipeline(promises)
   }
 
-  clear(trellis_name:string):Promise {
-    console.log('clearing', trellis_name)
-    return this.post(trellis_name + '/update?commit=true', '<delete><query>*:*</query></delete>', 'xml')
-  }
-
-  clear_all():Promise {
-    return this.perform_on_all_trellises((name)=>
-        this.clear(name)
-    )
+  clear():Promise {
+    return this.post(this.get_core() + '/update?commit=true', '<delete><query>*:*</query></delete>', 'xml')
   }
 
   create_update(trellis_name:string):Promise {
     return this.create_trellis_updates(trellis_name)
       .then((updates)=> {
         console.log('update-solr', trellis_name, JSON.stringify(updates))
-        return this.post_update(trellis_name, updates)
+        return this.post_update(updates)
       })
   }
 
@@ -236,7 +236,7 @@ class Solr extends Vineyard.Bulb {
     }
 
     console.log('update-solr2', trellis_name, JSON.stringify(update))
-    return this.post_update(trellis_name, [ update ])
+    return this.post_update([ update ])
   }
 
   create_trellis_updates(trellis_name:string):Promise {
