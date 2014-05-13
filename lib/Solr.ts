@@ -42,13 +42,15 @@ class Solr extends Vineyard.Bulb {
             }
 
             var ids = docs.map((doc)=> primary.get_sql_value(doc[trellis.primary_key]))
-            filter.value = ids.join(', ')
+            filter.value = "(" + ids.join(', ') + ")"
           })
       },
       "render": (result, filter, property, data)=> {
         var trellis = property.parent
         var primary = trellis.properties[trellis.primary_key]
-        result.filters.push(primary.query() + ' IN (' + filter.value + ')')
+        data.reference = primary.query()
+        data.operator = 'IN'
+        //        result.filters.push(primary.query() + ' IN (' + filter.value + ')')
       }
     }
 

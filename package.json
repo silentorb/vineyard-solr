@@ -1,6 +1,6 @@
 {
   "name": "vineyard-solr",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Solr integration for Vineyard",
   "main": "lib/Solr.js",
   "repository": {
